@@ -2,7 +2,9 @@ const MapPinIcon = () => (
 	<svg
 		aria-hidden="true"
 		viewBox="0 0 24 24"
-		className="h-7 w-7 text-gray-700"
+		width="28"
+		height="28"
+		className="h-7 w-7 shrink-0 text-gray-700"
 		fill="none"
 		stroke="currentColor"
 		strokeWidth="2"
