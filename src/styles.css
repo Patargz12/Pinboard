@@ -60,20 +60,8 @@
   }
 }
 
-/* Leaflet popup and tooltip overrides */
-.custom-popup .leaflet-popup-content-wrapper {
-  padding: 6px;
-  box-shadow: var(--box-shadow);
-}
 
-.custom-popup .leaflet-popup-content {
-  margin: 8px;
-}
-
-.custom-popup .leaflet-popup-tip {
-  box-shadow: var(--box-shadow);
-}
-
+/* Need to perform a CSS Override to alter the UI properties of tooltip coming from React Leaflet in MapViewClient.tsx */
 .custom-tooltip.leaflet-tooltip {
   margin-left: 14px;
   padding: 4px;
