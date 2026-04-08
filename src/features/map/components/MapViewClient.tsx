@@ -1,12 +1,18 @@
 import { useEffect, useRef } from "react";
 import { divIcon, point } from "leaflet";
-import type { LeafletEvent, Marker as LeafletMarker } from "leaflet";
+import type { Marker as LeafletMarker } from "leaflet";
 import { MapContainer, Marker, TileLayer, Tooltip, useMapEvents } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 
 import { reverseGeocode, throttledReverseGeocode } from "@/features/map/services/geocoding";
 import { usePinStore } from "@/features/pins/store/usePinStore";
 import { formatToDMS } from "@/features/map/utils/formatCoords";
+import {
+	createHandlePinDragEnd,
+	createHandlePinDragStart,
+	createShouldIgnoreMapClick,
+	isDraggingAnyPin,
+} from "@/features/map/utils/dragHandlers";
 import { pinIcon } from "@/features/map/components/MapMarkerIcon";
 import { LocationIcon, useIsMobile } from "@/shared";
 
@@ -22,7 +28,11 @@ const createClusterCustomIcon = (cluster: { getChildCount: () => number }) =>
 		iconSize: point(42, 42, true),
 	});
 
-function MapClickHandler() {
+type MapClickHandlerProps = {
+	shouldIgnoreMapClick: () => boolean;
+};
+
+function MapClickHandlerWithDragGuard({ shouldIgnoreMapClick }: MapClickHandlerProps) {
 	const addPin = usePinStore((state) => state.addPin);
 	const updatePin = usePinStore((state) => state.updatePin);
 	const setActivePinId = usePinStore((state) => state.setActivePinId);
@@ -30,6 +40,10 @@ function MapClickHandler() {
 
 	useMapEvents({
 		click: (event) => {
+			if (shouldIgnoreMapClick()) {
+				return;
+			}
+
 			const { lat, lng } = event.latlng;
 
 			const pinId = crypto.randomUUID();
@@ -68,6 +82,9 @@ export default function MapViewClient() {
 	const isMobile = useIsMobile();
 	const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
 	const previousFocusedPinId = useRef<string | null>(null);
+	const draggingPinIdRef = useRef<string | null>(null);
+	const ignoreMapClicksUntilRef = useRef(0);
+	const geocodeRequestSeqRef = useRef<Record<string, number>>({});
 
 	useEffect(() => {
 		if (!isMobile && activePinId) {
@@ -93,15 +110,21 @@ export default function MapViewClient() {
 		previousFocusedPinId.current = focusedPinId;
 	}, [hoveredPinId, activePinId, isMobile]);
 
-	const handlePinDragEnd = (id: string) => async (e: LeafletEvent) => {
-		const marker = e.target as { getLatLng: () => { lat: number; lng: number } };
-		const { lat, lng } = marker.getLatLng();
+	const handlePinDragStart = createHandlePinDragStart({
+		draggingPinIdRef,
+		ignoreMapClicksUntilRef,
+		setHoveredPinId,
+	});
 
-		updatePin(id, { lat, lng, address: "" });
+	const handlePinDragEnd = createHandlePinDragEnd({
+		draggingPinIdRef,
+		ignoreMapClicksUntilRef,
+		geocodeRequestSeqRef,
+		updatePin,
+		reverseGeocode,
+	});
 
-		const address = await reverseGeocode(lat, lng);
-		updatePin(id, { address });
-	};
+	const shouldIgnoreMapClick = createShouldIgnoreMapClick(ignoreMapClicksUntilRef);
 
 	return (
 		<MapContainer center={MELBOURNE_CENTER} zoom={INITIAL_ZOOM} zoomControl={false} className="h-full w-full">
@@ -109,7 +132,7 @@ export default function MapViewClient() {
 				url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 			/>
-			<MapClickHandler />
+			<MapClickHandlerWithDragGuard shouldIgnoreMapClick={shouldIgnoreMapClick} />
 			<MarkerClusterGroup chunkedLoading iconCreateFunction={createClusterCustomIcon}>
 				{pins.map((pin) => {
 					const formattedCoords = formatToDMS(pin.lat, pin.lng);
@@ -125,13 +148,26 @@ export default function MapViewClient() {
 							}}
 							draggable
 							eventHandlers={{
-									mouseover: () => setHoveredPinId(pin.id),
-									mouseout: () => setHoveredPinId(null),
-									click: () => {
-										if (isMobile) {
-											setActivePinId(pin.id);
-										}
-									},
+								dragstart: handlePinDragStart(pin.id),
+								mouseover: () => {
+									if (isDraggingAnyPin(draggingPinIdRef)) {
+										return;
+									}
+
+									setHoveredPinId(pin.id);
+								},
+								mouseout: () => {
+									if (isDraggingAnyPin(draggingPinIdRef)) {
+										return;
+									}
+
+									setHoveredPinId(null);
+								},
+								click: () => {
+									if (isMobile) {
+										setActivePinId(pin.id);
+									}
+								},
 								dragend: handlePinDragEnd(pin.id),
 							}}
 						>
