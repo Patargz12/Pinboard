@@ -63,6 +63,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body
+        suppressHydrationWarning
         data-css-ready="false"
         className="wrap-anywhere font-sans antialiased selection:bg-[rgba(79,184,178,0.24)]"
       >
