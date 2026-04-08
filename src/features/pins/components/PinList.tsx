@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef } from "react";
 
 import { Button, LocationIcon } from "@/shared/components";
+import { useIsMobile } from "@/shared/lib";
 
 const extractPinNumber = (label: string): string => {
 	const match = label.match(/\d+/);
@@ -35,24 +36,33 @@ const TrashIcon = () => (
 	</svg>
 );
 
-export default function PinList() {
+type PinListProps = {
+	onMobilePinSelect?: (pinId: string | null) => void;
+};
+
+export default function PinList({ onMobilePinSelect }: PinListProps) {
 	const pins = usePinStore((state) => state.pins);
 	const removePin = usePinStore((state) => state.removePin);
 	const hoveredPinId = usePinStore((state) => state.hoveredPinId);
+	const activePinId = usePinStore((state) => state.activePinId);
 	const setHoveredPinId = usePinStore((state) => state.setHoveredPinId);
+	const setActivePinId = usePinStore((state) => state.setActivePinId);
 	const prefersReducedMotion = useReducedMotion();
+	const isMobile = useIsMobile();
 	const pinRowRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
 	useEffect(() => {
-		if (!hoveredPinId) {
+		const focusedPinId = hoveredPinId ?? (isMobile ? activePinId : null);
+
+		if (!focusedPinId) {
 			return;
 		}
 
-		pinRowRefs.current[hoveredPinId]?.scrollIntoView({
+		pinRowRefs.current[focusedPinId]?.scrollIntoView({
 			block: "nearest",
 			behavior: prefersReducedMotion ? "auto" : "smooth",
 		});
-	}, [hoveredPinId, prefersReducedMotion]);
+	}, [hoveredPinId, activePinId, isMobile, prefersReducedMotion]);
 
 	return (
 		<aside className="h-full overflow-hidden rounded-normal border-gray-200 bg-primary shadow-soft">
@@ -72,7 +82,7 @@ export default function PinList() {
 						<AnimatePresence initial={false} mode="popLayout">
 							{pins.map((pin) => {
 							const pinNumber = extractPinNumber(pin.label);
-							const isActive = hoveredPinId === pin.id;
+							const isActive = hoveredPinId === pin.id || (isMobile && activePinId === pin.id);
 
 							return (
 								<motion.li
@@ -99,8 +109,27 @@ export default function PinList() {
 											  }
 									}
 									className={`group border-b border-gray-100 px-4 py-3 transition-colors duration-200 hover:bg-gray-100/70 ${isActive ? "bg-gray-100/70" : ""}`}
-									onMouseEnter={() => setHoveredPinId(pin.id)}
-									onMouseLeave={() => setHoveredPinId(null)}
+									onMouseEnter={() => {
+										if (isMobile && activePinId === pin.id) {
+											return;
+										}
+
+										setHoveredPinId(pin.id);
+									}}
+									onMouseLeave={() => {
+										if (isMobile && activePinId === pin.id) {
+											return;
+										}
+
+										setHoveredPinId(null);
+									}}
+									onClick={() => {
+										if (isMobile) {
+											const nextActivePinId = activePinId === pin.id ? null : pin.id;
+											setActivePinId(nextActivePinId);
+											onMobilePinSelect?.(nextActivePinId);
+										}
+									}}
 								>
 									<div className="flex items-center gap-3">
 										<div
@@ -131,7 +160,10 @@ export default function PinList() {
 
 										<Button
 											variant="delete"
-											onClick={() => removePin(pin.id)}
+											onClick={(event) => {
+												event.stopPropagation();
+												removePin(pin.id);
+											}}
 											aria-label={`Delete ${pin.label}`}
 										>
 											<TrashIcon />

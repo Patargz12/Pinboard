@@ -1,6 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+@import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 
 :root {
   --primary: #ffffff;
@@ -9,6 +10,7 @@
 }
 
 @theme {
+  --font-sans: "Roboto", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --color-primary: var(--primary);
   --shadow-soft: var(--box-shadow);
   --radius-normal: var(--border-normal);

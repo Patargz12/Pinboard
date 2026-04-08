@@ -1,6 +1,3 @@
-import "leaflet/dist/leaflet.css";
-import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
-
 import { useEffect, useRef } from "react";
 import { divIcon, point } from "leaflet";
 import type { LeafletEvent, Marker as LeafletMarker } from "leaflet";
@@ -11,7 +8,7 @@ import { reverseGeocode, throttledReverseGeocode } from "@/features/map/services
 import { usePinStore } from "@/features/pins/store/usePinStore";
 import { formatToDMS } from "@/features/map/utils/formatCoords";
 import { pinIcon } from "@/features/map/components/MapMarkerIcon";
-import { LocationIcon } from "@/shared";
+import { LocationIcon, useIsMobile } from "@/shared";
 
 const MELBOURNE_CENTER: [number, number] = [-37.8136, 144.9631];
 const INITIAL_ZOOM = 16;
@@ -28,13 +25,16 @@ const createClusterCustomIcon = (cluster: { getChildCount: () => number }) =>
 function MapClickHandler() {
 	const addPin = usePinStore((state) => state.addPin);
 	const updatePin = usePinStore((state) => state.updatePin);
+	const setActivePinId = usePinStore((state) => state.setActivePinId);
+	const isMobile = useIsMobile();
 
 	useMapEvents({
 		click: (event) => {
 			const { lat, lng } = event.latlng;
 
+			const pinId = crypto.randomUUID();
 			const pin = {
-				id: crypto.randomUUID(),
+				id: pinId,
 				lat,
 				lng,
 				address: "",
@@ -42,6 +42,12 @@ function MapClickHandler() {
 			};
 
 			addPin(pin);
+
+			if (isMobile) {
+				setActivePinId(pinId);
+			} else {
+				setActivePinId(null);
+			}
 
 			void throttledReverseGeocode(lat, lng).then((address) => {
 				updatePin(pin.id, { address });
@@ -56,23 +62,36 @@ export default function MapViewClient() {
 	const pins = usePinStore((state) => state.pins);
 	const updatePin = usePinStore((state) => state.updatePin);
 	const hoveredPinId = usePinStore((state) => state.hoveredPinId);
+	const activePinId = usePinStore((state) => state.activePinId);
 	const setHoveredPinId = usePinStore((state) => state.setHoveredPinId);
+	const setActivePinId = usePinStore((state) => state.setActivePinId);
+	const isMobile = useIsMobile();
 	const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
-	const previousHoveredPinId = useRef<string | null>(null);
+	const previousFocusedPinId = useRef<string | null>(null);
 
 	useEffect(() => {
-		const prevId = previousHoveredPinId.current;
+		if (!isMobile && activePinId) {
+			setActivePinId(null);
+		}
+	}, [isMobile, activePinId, setActivePinId]);
 
-		if (prevId && prevId !== hoveredPinId) {
+	useEffect(() => {
+		const focusedPinId = isMobile ? hoveredPinId ?? activePinId : hoveredPinId;
+		const prevId = previousFocusedPinId.current;
+
+		if (prevId && prevId !== focusedPinId) {
 			markerRefs.current[prevId]?.closeTooltip();
 		}
 
-		if (hoveredPinId) {
-			markerRefs.current[hoveredPinId]?.openTooltip();
+		if (focusedPinId) {
+			const focusedMarker = markerRefs.current[focusedPinId];
+			if (prevId !== focusedPinId || !focusedMarker?.isTooltipOpen()) {
+				focusedMarker?.openTooltip();
+			}
 		}
 
-		previousHoveredPinId.current = hoveredPinId;
-	}, [hoveredPinId]);
+		previousFocusedPinId.current = focusedPinId;
+	}, [hoveredPinId, activePinId, isMobile]);
 
 	const handlePinDragEnd = (id: string) => async (e: LeafletEvent) => {
 		const marker = e.target as { getLatLng: () => { lat: number; lng: number } };
@@ -108,6 +127,11 @@ export default function MapViewClient() {
 							eventHandlers={{
 									mouseover: () => setHoveredPinId(pin.id),
 									mouseout: () => setHoveredPinId(null),
+									click: () => {
+										if (isMobile) {
+											setActivePinId(pin.id);
+										}
+									},
 								dragend: handlePinDragEnd(pin.id),
 							}}
 						>

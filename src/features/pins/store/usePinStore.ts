@@ -12,10 +12,12 @@ type PinStore = {
 	pins: Pin[];
 	pinCounter: number;
 	hoveredPinId: string | null;
+	activePinId: string | null;
 	addPin: (pin: CreatePinInput) => void;
 	removePin: (id: string) => void;
 	updatePin: (id: string, updates: PinUpdatesInput) => void;
 	setHoveredPinId: (id: string | null) => void;
+	setActivePinId: (id: string | null) => void;
 };
 
 const sanitizePins = (pins: unknown): Pin[] => {
@@ -42,6 +44,7 @@ export const usePinStore = create<PinStore>()(
 			pins: [],
 			pinCounter: 0,
 			hoveredPinId: null,
+			activePinId: null,
 			addPin: (pin) =>
 				set((state) => {
 					const parsedPinInput = createPinSchema.safeParse(pin);
@@ -70,6 +73,7 @@ export const usePinStore = create<PinStore>()(
 				set((state) => ({
 					pins: state.pins.filter((pin) => pin.id !== id),
 					hoveredPinId: state.hoveredPinId === id ? null : state.hoveredPinId,
+					activePinId: state.activePinId === id ? null : state.activePinId,
 				})),
 			updatePin: (id, updates) =>
 				set((state) => {
@@ -92,6 +96,7 @@ export const usePinStore = create<PinStore>()(
 					};
 				}),
 			setHoveredPinId: (id) => set({ hoveredPinId: id }),
+			setActivePinId: (id) => set({ activePinId: id }),
 		}),
 		{
 			name: "pin-store",

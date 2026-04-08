@@ -21,6 +21,15 @@ function HomePage() {
 	const [mobileSheetHeight, setMobileSheetHeight] = useState(MOBILE_SHEET_HEIGHTS.default)
 	const [dragStart, setDragStart] = useState<{ startY: number; startHeight: number; pointerId: number } | null>(null)
 
+	const handleMobilePinSelect = (pinId: string | null) => {
+		if (!pinId) {
+			return
+		}
+
+		setDragStart(null)
+		setMobileSheetHeight(MOBILE_SHEET_HEIGHTS.collapsed)
+	}
+
 	const handleSheetPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
 		event.preventDefault()
 		event.currentTarget.setPointerCapture(event.pointerId)
@@ -76,7 +85,7 @@ function HomePage() {
 
 				{/* Mobile portrait: draggable bottom sheet for PinList */}
 				<section
-					className={`absolute right-0 bottom-0 left-0 z-1000 rounded-t-3xl border-t border-gray-200 bg-primary shadow-xl md:hidden [@media(max-width:767px)_and_(orientation:landscape)]:hidden ${dragStart ? '' : 'transition-[height] duration-200 ease-out'}`}
+					className={`absolute right-0 bottom-0 left-0 z-1000 rounded-t-3xl border-t border-gray-200 bg-primary shadow-xl md:hidden [@media(max-width:767px)_and_(orientation:landscape)]:hidden ${dragStart ? '' : 'transition-[height] duration-500 ease-out'}`}
 					style={{ height: `${mobileSheetHeight}%` }}
 				>
 					<div className="flex h-full min-h-0 flex-col">
@@ -91,7 +100,7 @@ function HomePage() {
 							<div className="h-1.5 w-14 rounded-full bg-gray-300" aria-hidden="true" />
 						</div>
 						<div className="min-h-0 flex-1 px-2 pb-0">
-							<PinList />
+							<PinList onMobilePinSelect={handleMobilePinSelect} />
 						</div>
 					</div>
 				</section>

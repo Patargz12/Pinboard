@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+RUN rm -rf .output .vinxi && npm run build
 
 FROM node:22-alpine AS runner
 
