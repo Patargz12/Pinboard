@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --primary: #ffffff;
+  --box-shadow: 0 3px 4px rgba(54, 54, 54, 0.16);
+  --border-normal: 0.5rem;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --shadow-soft: var(--box-shadow);
+  --radius-normal: var(--border-normal);
+  --text-ccordinates: 12px;
+  --text-ccordinates--line-height: 1;
+  --text-address: 12px;
+  --text-address--line-height: 0.75rem;
+}
+
+@layer components {
+  .pin-list-item {
+    animation: pin-list-in 260ms ease-out both;
+  }
+
+  .pin-cluster-icon {
+    background: transparent;
+    border: 0;
+  }
+}
+
+@keyframes pin-list-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pin-marker svg {
+  transform-origin: 50% 88%;
+  animation: pin-pop-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pin-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Leaflet popup and tooltip overrides */
+.custom-popup .leaflet-popup-content-wrapper {
+  padding: 6px;
+  box-shadow: var(--box-shadow);
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 8px;
+}
+
+.custom-popup .leaflet-popup-tip {
+  box-shadow: var(--box-shadow);
+}
+
+.custom-tooltip.leaflet-tooltip {
+  margin-left: 14px;
+  padding: 4px;
+  border-radius: var(--border-normal);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: var(--box-shadow);
+}
+
+.custom-tooltip .leaflet-tooltip-content {
+  margin: 0;
+  white-space: normal;
+}
+
+.custom-tooltip.leaflet-tooltip::before {
+  display: none;
+}
+
+.custom-tooltip .tooltip-coords span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-tooltip .tooltip-address {
+  display: -webkit-box;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.leaflet-fade-anim .custom-tooltip.leaflet-tooltip {
+  transition: opacity 250ms ease-in-out;
+}
